@@ -1,0 +1,21 @@
+# Secret environment files — NEVER commit
+.env
+backend/.env
+
+# Keep frontend .env.production (has public API URL only, no secrets)
+!frontend/.env.production
+
+# Dependencies
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Build output
+frontend/build/
+
+# Database
+backend/techhub.db
+
+# OS
+.DS_Store
+Thumbs.db
