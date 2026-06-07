@@ -30,7 +30,7 @@ jobs:
           node -e "require('./database')" && echo "✅ Database module OK"
           node -e "require('./server')" &
           sleep 3
-          curl -f http://localhost:5000/ && echo "✅ Backend responding"
+          curl -f https://techhub-rwanda.onrender.com/ && echo "✅ Backend responding"
           kill %1
 
   test-frontend:
