@@ -22,6 +22,7 @@ app.use(express.json());
 // Routes
 app.use('/api/products', require('./routes/products'));
 app.use('/api/orders', require('./routes/orders'));
+app.use('/api/admin', require('./routes/admin'));
 
 
 // Test route

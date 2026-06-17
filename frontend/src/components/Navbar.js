@@ -26,6 +26,7 @@ const Navbar = () => {
           </Link>
           <Link to="/track"   className={`navbar-link${isActive('/track')   ? ' navbar-link-active' : ''}`}>Track Order</Link>
           <Link to="/contact" className={`navbar-link${isActive('/contact') ? ' navbar-link-active' : ''}`}>Contact</Link>
+          <Link to="/admin/login" className={`navbar-link navbar-link-admin${isActive('/admin/login') || isActive('/admin/dashboard') ? ' navbar-link-active' : ''}`}>🔐 Admin</Link>
           <Link to="/cart" className="navbar-cart">
             🛒 Cart
             {totalItems > 0 && <span className="navbar-badge">{totalItems}</span>}
@@ -44,6 +45,7 @@ const Navbar = () => {
           <Link to="/deals"   className="navbar-mobile-link" onClick={() => setOpen(false)}>🔥 Deals & Offers</Link>
           <Link to="/track"   className="navbar-mobile-link" onClick={() => setOpen(false)}>📦 Track Order</Link>
           <Link to="/contact" className="navbar-mobile-link" onClick={() => setOpen(false)}>📞 Contact Us</Link>
+          <Link to="/admin/login" className="navbar-mobile-link" onClick={() => setOpen(false)}>🔐 Admin Panel</Link>
           <Link to="/cart"    className="navbar-mobile-link" onClick={() => setOpen(false)}>
             🛒 Cart {totalItems > 0 && `(${totalItems})`}
           </Link>

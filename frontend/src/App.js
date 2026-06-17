@@ -13,10 +13,14 @@ import Confirmation from './pages/Confirmation';
 import Deals from './pages/Deals';
 import TrackOrder from './pages/TrackOrder';
 import Contact from './pages/Contact';
+import AdminLogin from './pages/AdminLogin';
+import AdminDashboard from './pages/AdminDashboard';
+import './admin.css';
 
 const Layout = () => {
   const location = useLocation();
   const isWelcome = location.pathname === '/';
+  const isAdmin = location.pathname.startsWith('/admin');
 
   return (
     <>
@@ -34,7 +38,7 @@ const Layout = () => {
           success: { iconTheme: { primary: '#f5a623', secondary: '#07071a' } },
         }}
       />
-      {!isWelcome && <Navbar />}
+      {!isWelcome && !isAdmin && <Navbar />}
       <Routes>
         <Route path="/"                       element={<Welcome />} />
         <Route path="/home"                   element={<Home />} />
@@ -46,6 +50,8 @@ const Layout = () => {
         <Route path="/deals"                  element={<Deals />} />
         <Route path="/track"                  element={<TrackOrder />} />
         <Route path="/contact"                element={<Contact />} />
+        <Route path="/admin/login"            element={<AdminLogin />} />
+        <Route path="/admin/dashboard"        element={<AdminDashboard />} />
       </Routes>
     </>
   );
