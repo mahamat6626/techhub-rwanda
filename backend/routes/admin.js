@@ -138,7 +138,44 @@ router.get('/stats', (req, res) => {
 
         db.get('SELECT COALESCE(SUM(total), 0) as total FROM orders', [], (err, row) => {
           stats.totalRevenue = row ? row.total : 0;
-          res.json(stats);
+
+          // Revenue by category
+          db.all(`
+            SELECT c.name, COALESCE(SUM(oi.price * oi.quantity), 0) as revenue
+            FROM categories c
+            LEFT JOIN products p ON p.category_id = c.id
+            LEFT JOIN order_items oi ON oi.product_id = p.id
+            GROUP BY c.id
+          `, [], (err, rows) => {
+            stats.revenueByCategory = rows || [];
+
+            // Orders by status
+            db.all(`SELECT status, COUNT(*) as count FROM orders GROUP BY status`, [], (err, rows) => {
+              stats.ordersByStatus = rows || [];
+
+              // Recent 7 days revenue
+              db.all(`
+                SELECT DATE(created_at) as date, COALESCE(SUM(total), 0) as revenue
+                FROM orders
+                WHERE created_at >= DATE('now', '-7 days')
+                GROUP BY DATE(created_at)
+                ORDER BY date ASC
+              `, [], (err, rows) => {
+                stats.recentRevenue = rows || [];
+
+                // Products per category
+                db.all(`
+                  SELECT c.name, COUNT(p.id) as count
+                  FROM categories c
+                  LEFT JOIN products p ON p.category_id = c.id
+                  GROUP BY c.id
+                `, [], (err, rows) => {
+                  stats.productsByCategory = rows || [];
+                  res.json(stats);
+                });
+              });
+            });
+          });
         });
       });
     });

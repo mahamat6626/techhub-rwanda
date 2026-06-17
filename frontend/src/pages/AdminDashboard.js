@@ -2,8 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, LineChart, Line, Legend
+} from 'recharts';
 
 const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+const COLORS = ['#f5a623', '#4361ee', '#00c896', '#ef4444', '#8b5cf6', '#f59e0b', '#06b6d4'];
+const STATUS_COLORS = { pending: '#f59e0b', paid: '#00c896', shipped: '#4361ee', cancelled: '#ef4444' };
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="chart-tooltip">
+        <p className="chart-tooltip-label">{label}</p>
+        {payload.map((p, i) => (
+          <p key={i} className="chart-tooltip-value" style={{ color: p.color }}>
+            {p.name}: {p.value.toLocaleString()}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -13,12 +36,18 @@ const AdminDashboard = () => {
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [chartWidth, setChartWidth] = useState(window.innerWidth);
 
-  // New product form
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     name: '', description: '', price: '', image: '', stock: '', category_id: ''
   });
+
+  useEffect(() => {
+    const handleResize = () => setChartWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const stored = localStorage.getItem('techhub_admin');
@@ -88,9 +117,11 @@ const AdminDashboard = () => {
   };
 
   const getStatusBadge = (status) => {
-    const cls = status === 'pending' ? 'badge-pending' : status === 'confirmed' ? 'badge-confirmed' : 'badge-shipped';
+    const cls = status === 'pending' ? 'badge-pending' : status === 'paid' || status === 'paid' ? 'badge-paid' : status === 'shipped' ? 'badge-shipped' : 'badge-pending';
     return <span className={`order-badge ${cls}`}>{status}</span>;
   };
+
+  const isMobile = chartWidth < 700;
 
   if (loading) {
     return (
@@ -130,22 +161,24 @@ const AdminDashboard = () => {
 
       {/* ── MAIN CONTENT ── */}
       <main className="admin-main">
-        {/* OVERVIEW TAB */}
+        {/* ═══ OVERVIEW TAB ═══ */}
         {activeTab === 'overview' && (
           <>
             <h1 className="admin-page-title">Dashboard Overview</h1>
+
+            {/* Stats Cards */}
             <div className="admin-stats-grid">
-              <div className="admin-stat-card" style={{ borderTop: '3px solid var(--gold)' }}>
+              <div className="admin-stat-card" style={{ borderTop: '3px solid #f5a623' }}>
                 <div className="admin-stat-icon">💰</div>
                 <div className="admin-stat-value">{formatRWF(stats?.totalRevenue || 0)}</div>
                 <div className="admin-stat-label">Total Revenue</div>
               </div>
-              <div className="admin-stat-card" style={{ borderTop: '3px solid var(--indigo)' }}>
+              <div className="admin-stat-card" style={{ borderTop: '3px solid #4361ee' }}>
                 <div className="admin-stat-icon">📦</div>
                 <div className="admin-stat-value">{stats?.totalOrders || 0}</div>
                 <div className="admin-stat-label">Total Orders</div>
               </div>
-              <div className="admin-stat-card" style={{ borderTop: '3px solid var(--success)' }}>
+              <div className="admin-stat-card" style={{ borderTop: '3px solid #00c896' }}>
                 <div className="admin-stat-icon">🏷️</div>
                 <div className="admin-stat-value">{stats?.totalProducts || 0}</div>
                 <div className="admin-stat-label">Products</div>
@@ -154,6 +187,81 @@ const AdminDashboard = () => {
                 <div className="admin-stat-icon">👥</div>
                 <div className="admin-stat-value">{stats?.totalCustomers || 0}</div>
                 <div className="admin-stat-label">Customers</div>
+              </div>
+            </div>
+
+            {/* Charts Row */}
+            <div className="admin-charts-grid">
+              {/* Revenue by Category - Bar Chart */}
+              <div className="admin-chart-card">
+                <h3 className="admin-chart-title">💰 Revenue by Category</h3>
+                <ResponsiveContainer width="100%" height={isMobile ? 200 : 260}>
+                  <BarChart data={stats?.revenueByCategory || []} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1a1a4a" />
+                    <XAxis dataKey="name" tick={{ fill: '#9fa5cc', fontSize: 11 }} axisLine={{ stroke: '#1a1a4a' }} tickLine={false} />
+                    <YAxis tick={{ fill: '#9fa5cc', fontSize: 11 }} axisLine={{ stroke: '#1a1a4a' }} tickLine={false} tickFormatter={(v) => v >= 1000 ? (v/1000)+'k' : v} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(245,166,35,0.08)' }} />
+                    <Bar dataKey="revenue" name="Revenue" radius={[6, 6, 0, 0]}>
+                      {(stats?.revenueByCategory || []).map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} fillOpacity={0.85} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Orders by Status - Pie Chart */}
+              <div className="admin-chart-card">
+                <h3 className="admin-chart-title">📊 Orders by Status</h3>
+                <ResponsiveContainer width="100%" height={isMobile ? 200 : 260}>
+                  <PieChart>
+                    <Pie
+                      data={stats?.ordersByStatus || []}
+                      cx="50%" cy="50%"
+                      innerRadius={isMobile ? 50 : 65}
+                      outerRadius={isMobile ? 80 : 100}
+                      paddingAngle={4}
+                      dataKey="count"
+                      nameKey="status"
+                    >
+                      {(stats?.ordersByStatus || []).map((entry, i) => (
+                        <Cell key={i} fill={STATUS_COLORS[entry.status] || COLORS[i % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend
+                      formatter={(value) => <span style={{ color: '#9fa5cc', fontSize: 12 }}>{value}</span>}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Recent Revenue - Line Chart */}
+              <div className="admin-chart-card admin-chart-wide">
+                <h3 className="admin-chart-title">📈 Revenue (Last 7 Days)</h3>
+                <ResponsiveContainer width="100%" height={isMobile ? 200 : 260}>
+                  <LineChart data={stats?.recentRevenue || []} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1a1a4a" />
+                    <XAxis dataKey="date" tick={{ fill: '#9fa5cc', fontSize: 11 }} axisLine={{ stroke: '#1a1a4a' }} tickLine={false} />
+                    <YAxis tick={{ fill: '#9fa5cc', fontSize: 11 }} axisLine={{ stroke: '#1a1a4a' }} tickLine={false} tickFormatter={(v) => v >= 1000 ? (v/1000)+'k' : v} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Line type="monotone" dataKey="revenue" name="Revenue" stroke="#f5a623" strokeWidth={3} dot={{ fill: '#f5a623', stroke: '#0d0d24', strokeWidth: 2, r: 5 }} activeDot={{ r: 7 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Products per Category - Bar Chart */}
+              <div className="admin-chart-card">
+                <h3 className="admin-chart-title">🏷️ Products per Category</h3>
+                <ResponsiveContainer width="100%" height={isMobile ? 200 : 260}>
+                  <BarChart data={stats?.productsByCategory || []} margin={{ top: 10, right: 10, left: 0, bottom: 5 }} layout={isMobile ? 'vertical' : 'vertical'}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1a1a4a" />
+                    <XAxis type="number" tick={{ fill: '#9fa5cc', fontSize: 11 }} axisLine={{ stroke: '#1a1a4a' }} tickLine={false} />
+                    <YAxis type="category" dataKey="name" tick={{ fill: '#9fa5cc', fontSize: 11 }} axisLine={{ stroke: '#1a1a4a' }} tickLine={false} width={isMobile ? 90 : 120} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,200,150,0.08)' }} />
+                    <Bar dataKey="count" name="Products" radius={[0, 6, 6, 0]} fill="#00c896" fillOpacity={0.85} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
@@ -189,7 +297,7 @@ const AdminDashboard = () => {
           </>
         )}
 
-        {/* PRODUCTS TAB */}
+        {/* ═══ PRODUCTS TAB ═══ */}
         {activeTab === 'products' && (
           <>
             <div className="admin-tab-header">
@@ -283,10 +391,27 @@ const AdminDashboard = () => {
           </>
         )}
 
-        {/* ORDERS TAB */}
+        {/* ═══ ORDERS TAB ═══ */}
         {activeTab === 'orders' && (
           <>
             <h1 className="admin-page-title">📋 All Orders</h1>
+
+            {/* Small status summary */}
+            <div className="admin-stats-grid" style={{ marginBottom: 20, gridTemplateColumns: 'repeat(3, 1fr)' }}>
+              <div className="admin-stat-card" style={{ borderTop: '3px solid #f59e0b', textAlign: 'center' }}>
+                <div className="admin-stat-value" style={{ color: '#f59e0b' }}>{stats?.ordersByStatus?.find(s => s.status === 'pending')?.count || 0}</div>
+                <div className="admin-stat-label">Pending</div>
+              </div>
+              <div className="admin-stat-card" style={{ borderTop: '3px solid #00c896', textAlign: 'center' }}>
+                <div className="admin-stat-value" style={{ color: '#00c896' }}>{stats?.ordersByStatus?.find(s => s.status === 'paid')?.count || 0}</div>
+                <div className="admin-stat-label">Paid</div>
+              </div>
+              <div className="admin-stat-card" style={{ borderTop: '3px solid #4361ee', textAlign: 'center' }}>
+                <div className="admin-stat-value" style={{ color: '#4361ee' }}>{stats?.ordersByStatus?.find(s => s.status === 'shipped')?.count || 0}</div>
+                <div className="admin-stat-label">Shipped</div>
+              </div>
+            </div>
+
             <div className="admin-table-wrap">
               <table className="admin-table">
                 <thead>
